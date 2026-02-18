@@ -1,0 +1,9 @@
+{
+  "id": "subject-manager",
+  "name": "Subject Manager",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Create and manage subject folders with metadata",
+  "author": "Your Name",
+  "isDesktopOnly": false
+}
