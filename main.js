@@ -106,9 +106,8 @@ module.exports = class SubjectManagerPlugin extends Plugin {
     }
 
     async loadData() {
-        const dataFile = `${this.app.vault.adapter.basePath}/subjects.json`;
         try {
-            const data = await this.app.vault.adapter.read('subjects.json');
+            const data = await this.app.vault.adapter.read('.obsidian/plugins/subject-manager/subjects.json');
             this.subjects = JSON.parse(data);
         } catch {
             this.subjects = [];
@@ -116,7 +115,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
     }
 
     async saveData() {
-        await this.app.vault.adapter.write('subjects.json', JSON.stringify(this.subjects, null, 2));
+        await this.app.vault.adapter.write('.obsidian/plugins/subject-manager/subjects.json', JSON.stringify(this.subjects, null, 2));
     }
 
     getTeachers() {
