@@ -1,4 +1,4 @@
-const { Plugin, Modal, Setting, Notice } = require('obsidian');
+const { Plugin, Modal, Setting, Notice, SuggestModal } = require('obsidian');
 
 class SubjectManagerModal extends Modal {
     constructor(app, plugin) {
@@ -88,6 +88,30 @@ class SubjectManagerModal extends Modal {
     }
 }
 
+class DeleteSubjectModal extends SuggestModal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    getSuggestions(query) {
+        return this.plugin.subjects.filter(s => 
+            s.folderName.toLowerCase().includes(query.toLowerCase()) ||
+            s.teacher.toLowerCase().includes(query.toLowerCase()) ||
+            s.module.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+
+    renderSuggestion(subject, el) {
+        el.createEl('div', { text: subject.folderName });
+        el.createEl('small', { text: `Teacher: ${subject.teacher || 'N/A'} | Module: ${subject.module || 'N/A'}` });
+    }
+
+    async onChooseSuggestion(subject) {
+        await this.plugin.deleteSubject(subject);
+    }
+}
+
 module.exports = class SubjectManagerPlugin extends Plugin {
     async onload() {
         await this.loadData();
@@ -102,6 +126,14 @@ module.exports = class SubjectManagerPlugin extends Plugin {
 
         this.addRibbonIcon('folder-plus', 'Create Subject', () => {
             new SubjectManagerModal(this.app, this).open();
+        });
+
+        this.addCommand({
+            id: 'delete-subject',
+            name: 'Delete Subject',
+            callback: () => {
+                new DeleteSubjectModal(this.app, this).open();
+            }
         });
     }
 
@@ -145,6 +177,22 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             await this.saveData();
             
             new Notice(`Subject "${folderName}" created successfully!`);
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async deleteSubject(subject) {
+        try {
+            const folder = this.app.vault.getAbstractFileByPath(subject.folderName);
+            if (folder) {
+                await this.app.vault.delete(folder, true);
+            }
+            
+            this.subjects = this.subjects.filter(s => s.folderName !== subject.folderName);
+            await this.saveData();
+            
+            new Notice(`Subject "${subject.folderName}" deleted successfully!`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
