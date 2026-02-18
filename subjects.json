@@ -1,1 +1,99 @@
-[]
+[
+  {
+    "number": "01",
+    "name": "Systeme d'information decisionnel",
+    "folderName": "01-Systeme d'information decisionnel",
+    "teacher": "Hassan Badir",
+    "module": "Systeme d'information decisionnel",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "02",
+    "name": "Ecosysteme BigData 1",
+    "folderName": "02-Ecosysteme BigData 1",
+    "teacher": "Hassan Badir",
+    "module": "Big Data et Ingenierie des Donnees",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "03",
+    "name": "Architectures des donnees",
+    "folderName": "03-Architectures des donnees",
+    "teacher": "Redouan Dahbi",
+    "module": "Big Data et Ingenierie des Donnees",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "04",
+    "name": "Strategies d'exploration de donnees",
+    "folderName": "04-Strategies d'exploration de donnees",
+    "teacher": "Redouan Dahbi",
+    "module": "Exploration de donnees et Apprentissage Profond",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "05",
+    "name": "Deep learning",
+    "folderName": "05-Deep learning",
+    "teacher": "Redouan Dahbi",
+    "module": "Exploration de donnees et Apprentissage Profond",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "06",
+    "name": "IA distribuee et systemes multi-agents",
+    "folderName": "06-IA distribuee et systemes multi-agents",
+    "teacher": "Kenza Chaoui",
+    "module": "IA Multi Agents",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "07",
+    "name": "PFA",
+    "folderName": "07-PFA",
+    "teacher": "Kenza Chaoui",
+    "module": "IA Multi Agents",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "08",
+    "name": "Systeme distribues au service de l'IA",
+    "folderName": "08-Systeme distribues au service de l'IA",
+    "teacher": "Yousra El Bouzidi",
+    "module": "Systeme distribues au service de l'IA",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "09",
+    "name": "Communication professionnelle 4",
+    "folderName": "09-Communication professionnelle 4",
+    "teacher": "Ghzlan Mamouri",
+    "module": "Langues etrangeres 4",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "10",
+    "name": "Advanced English 2",
+    "folderName": "10-Advanced English 2",
+    "teacher": "Bilal Ed-Derdaouy",
+    "module": "Langues etrangeres 4",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "11",
+    "name": "Gestion de projet",
+    "folderName": "11-Gestion de projet",
+    "teacher": "Mariem Bourji",
+    "module": "Gestion de projet et entrepreneuriat",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  },
+  {
+    "number": "12",
+    "name": "Entrepreneuriat",
+    "folderName": "12-Entrepreneuriat",
+    "teacher": "Hajar Kobi",
+    "module": "Gestion de projet et entrepreneuriat",
+    "dateCreated": "2026-02-18T15:37:43.193Z"
+  }
+]
+

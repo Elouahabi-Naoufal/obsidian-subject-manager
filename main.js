@@ -135,6 +135,14 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 new DeleteSubjectModal(this.app, this).open();
             }
         });
+
+        this.addCommand({
+            id: 'apply-changes',
+            name: 'Apply Changes from subjects.json',
+            callback: async () => {
+                await this.applyChangesFromJson();
+            }
+        });
     }
 
     async loadData() {
@@ -193,6 +201,42 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             await this.saveData();
             
             new Notice(`Subject "${subject.folderName}" deleted successfully!`);
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async applyChangesFromJson() {
+        try {
+            await this.loadData();
+            
+            const existingFolders = this.app.vault.getAllLoadedFiles()
+                .filter(f => f.children && f.parent?.path === '')
+                .map(f => f.path);
+            
+            const jsonFolders = this.subjects.map(s => s.folderName);
+            let deleted = 0, created = 0;
+            
+            // Delete folders with xx- format not in JSON
+            for (const folder of existingFolders) {
+                if (/^\d{2}-/.test(folder) && !jsonFolders.includes(folder)) {
+                    const f = this.app.vault.getAbstractFileByPath(folder);
+                    if (f) {
+                        await this.app.vault.delete(f, true);
+                        deleted++;
+                    }
+                }
+            }
+            
+            // Create missing folders from JSON
+            for (const subject of this.subjects) {
+                if (!existingFolders.includes(subject.folderName)) {
+                    await this.app.vault.createFolder(subject.folderName);
+                    created++;
+                }
+            }
+            
+            new Notice(`Applied! Created: ${created}, Deleted: ${deleted}`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
