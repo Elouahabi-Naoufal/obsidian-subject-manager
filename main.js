@@ -101,9 +101,21 @@ class SubjectManagerModal extends Modal {
 
         new Setting(contentEl)
             .setName('Time')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                const times = this.plugin.getTimes();
+                times.forEach(t => dropdown.addOption(t, t));
+                dropdown.onChange(value => {
+                    if (value) time = value;
+                });
+            });
+
+        new Setting(contentEl)
             .addText(text => text
                 .setPlaceholder('e.g., 08:00-10:00')
-                .onChange(value => time = value));
+                .onChange(value => {
+                    if (value) time = value;
+                }));
 
         new Setting(contentEl)
             .addButton(btn => btn
@@ -126,10 +138,11 @@ class SubjectManagerModal extends Modal {
 }
 
 class EditSubjectModal extends Modal {
-    constructor(app, plugin, subject) {
+    constructor(app, plugin, subject, keepOpen = false) {
         super(app);
         this.plugin = plugin;
         this.subject = subject;
+        this.keepOpen = keepOpen;
     }
 
     onOpen() {
@@ -230,10 +243,23 @@ class EditSubjectModal extends Modal {
 
         new Setting(contentEl)
             .setName('Time')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                const times = this.plugin.getTimes();
+                times.forEach(t => dropdown.addOption(t, t));
+                dropdown.setValue(time);
+                dropdown.onChange(value => {
+                    if (value) time = value;
+                });
+            });
+
+        new Setting(contentEl)
             .addText(text => text
                 .setPlaceholder('e.g., 08:00-10:00')
                 .setValue(time)
-                .onChange(value => time = value));
+                .onChange(value => {
+                    if (value) time = value;
+                }));
 
         new Setting(contentEl)
             .addButton(btn => btn
@@ -245,8 +271,18 @@ class EditSubjectModal extends Modal {
                         return;
                     }
                     await this.plugin.editSubject(this.subject, subjectNumber, subjectName, teacher, module, room, day, time);
+                    if (this.keepOpen) {
+                        new SelectSubjectModal(this.app, this.plugin, true).open();
+                    }
                     this.close();
                 }));
+
+        if (this.keepOpen) {
+            new Setting(contentEl)
+                .addButton(btn => btn
+                    .setButtonText('Stop Editing')
+                    .onClick(() => this.close()));
+        }
     }
 
     onClose() {
@@ -256,9 +292,10 @@ class EditSubjectModal extends Modal {
 }
 
 class SelectSubjectModal extends SuggestModal {
-    constructor(app, plugin) {
+    constructor(app, plugin, keepOpen = false) {
         super(app);
         this.plugin = plugin;
+        this.keepOpen = keepOpen;
     }
 
     getSuggestions(query) {
@@ -275,7 +312,7 @@ class SelectSubjectModal extends SuggestModal {
     }
 
     async onChooseSuggestion(subject) {
-        new EditSubjectModal(this.app, this.plugin, subject).open();
+        new EditSubjectModal(this.app, this.plugin, subject, this.keepOpen).open();
     }
 }
 
@@ -342,6 +379,14 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 await this.applyChangesFromJson();
             }
         });
+
+        this.addCommand({
+            id: 'bulk-edit-subjects',
+            name: 'Bulk Edit Subjects',
+            callback: () => {
+                new SelectSubjectModal(this.app, this, true).open();
+            }
+        });
     }
 
     async loadData() {
@@ -367,6 +412,10 @@ module.exports = class SubjectManagerPlugin extends Plugin {
 
     getRooms() {
         return [...new Set(this.subjects.map(s => s.room).filter(Boolean))];
+    }
+
+    getTimes() {
+        return [...new Set(this.subjects.map(s => s.time).filter(Boolean))];
     }
 
     async createSubject(number, name, teacher, module, room, day, time) {
