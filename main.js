@@ -15,6 +15,9 @@ class SubjectManagerModal extends Modal {
         let subjectName = '';
         let teacher = '';
         let module = '';
+        let room = '';
+        let day = '';
+        let time = '';
 
         new Setting(contentEl)
             .setName('Subject Number')
@@ -68,6 +71,40 @@ class SubjectManagerModal extends Modal {
                     if (value) module = value;
                 }));
 
+        const rooms = this.plugin.getRooms();
+        new Setting(contentEl)
+            .setName('Room')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                rooms.forEach(r => dropdown.addOption(r, r));
+                dropdown.onChange(value => {
+                    if (value) room = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('Or type new room')
+                .onChange(value => {
+                    if (value) room = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Day')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select day --');
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
+                    dropdown.addOption(d, d)
+                );
+                dropdown.onChange(value => day = value);
+            });
+
+        new Setting(contentEl)
+            .setName('Time')
+            .addText(text => text
+                .setPlaceholder('e.g., 08:00-10:00')
+                .onChange(value => time = value));
+
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Create')
@@ -77,7 +114,7 @@ class SubjectManagerModal extends Modal {
                         new Notice('Subject number and name are required!');
                         return;
                     }
-                    await this.plugin.createSubject(subjectNumber, subjectName, teacher, module);
+                    await this.plugin.createSubject(subjectNumber, subjectName, teacher, module, room, day, time);
                     this.close();
                 }));
     }
@@ -104,6 +141,9 @@ class EditSubjectModal extends Modal {
         let subjectName = this.subject.name;
         let teacher = this.subject.teacher;
         let module = this.subject.module;
+        let room = this.subject.room || '';
+        let day = this.subject.day || '';
+        let time = this.subject.time || '';
 
         new Setting(contentEl)
             .setName('Subject Number')
@@ -157,6 +197,44 @@ class EditSubjectModal extends Modal {
                     if (value) module = value;
                 }));
 
+        const rooms = this.plugin.getRooms();
+        new Setting(contentEl)
+            .setName('Room')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                rooms.forEach(r => dropdown.addOption(r, r));
+                dropdown.setValue(room);
+                dropdown.onChange(value => {
+                    if (value) room = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('Or type new room')
+                .setValue(room)
+                .onChange(value => {
+                    if (value) room = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Day')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select day --');
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
+                    dropdown.addOption(d, d)
+                );
+                dropdown.setValue(day);
+                dropdown.onChange(value => day = value);
+            });
+
+        new Setting(contentEl)
+            .setName('Time')
+            .addText(text => text
+                .setPlaceholder('e.g., 08:00-10:00')
+                .setValue(time)
+                .onChange(value => time = value));
+
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Save')
@@ -166,7 +244,7 @@ class EditSubjectModal extends Modal {
                         new Notice('Subject number and name are required!');
                         return;
                     }
-                    await this.plugin.editSubject(this.subject, subjectNumber, subjectName, teacher, module);
+                    await this.plugin.editSubject(this.subject, subjectNumber, subjectName, teacher, module, room, day, time);
                     this.close();
                 }));
     }
@@ -287,7 +365,11 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         return [...new Set(this.subjects.map(s => s.module).filter(Boolean))];
     }
 
-    async createSubject(number, name, teacher, module) {
+    getRooms() {
+        return [...new Set(this.subjects.map(s => s.room).filter(Boolean))];
+    }
+
+    async createSubject(number, name, teacher, module, room, day, time) {
         const folderName = `${number}-${name}`;
         
         try {
@@ -299,6 +381,9 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 folderName,
                 teacher: teacher || '',
                 module: module || '',
+                room: room || '',
+                day: day || '',
+                time: time || '',
                 dateCreated: new Date().toISOString()
             };
             
@@ -327,7 +412,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         }
     }
 
-    async editSubject(oldSubject, number, name, teacher, module) {
+    async editSubject(oldSubject, number, name, teacher, module, room, day, time) {
         const newFolderName = `${number}-${name}`;
         
         try {
@@ -346,7 +431,10 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                     name,
                     folderName: newFolderName,
                     teacher: teacher || '',
-                    module: module || ''
+                    module: module || '',
+                    room: room || '',
+                    day: day || '',
+                    time: time || ''
                 };
             }
             
