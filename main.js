@@ -88,6 +88,119 @@ class SubjectManagerModal extends Modal {
     }
 }
 
+class EditSubjectModal extends Modal {
+    constructor(app, plugin, subject) {
+        super(app);
+        this.plugin = plugin;
+        this.subject = subject;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'Edit Subject' });
+
+        let subjectNumber = this.subject.number;
+        let subjectName = this.subject.name;
+        let teacher = this.subject.teacher;
+        let module = this.subject.module;
+
+        new Setting(contentEl)
+            .setName('Subject Number')
+            .addText(text => text
+                .setValue(subjectNumber)
+                .onChange(value => subjectNumber = value));
+
+        new Setting(contentEl)
+            .setName('Subject Name')
+            .addText(text => text
+                .setValue(subjectName)
+                .onChange(value => subjectName = value));
+
+        const teachers = this.plugin.getTeachers();
+        new Setting(contentEl)
+            .setName('Teacher')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                teachers.forEach(t => dropdown.addOption(t, t));
+                dropdown.setValue(teacher);
+                dropdown.onChange(value => {
+                    if (value) teacher = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('Or type new teacher name')
+                .setValue(teacher)
+                .onChange(value => {
+                    if (value) teacher = value;
+                }));
+
+        const modules = this.plugin.getModules();
+        new Setting(contentEl)
+            .setName('Module')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                modules.forEach(m => dropdown.addOption(m, m));
+                dropdown.setValue(module);
+                dropdown.onChange(value => {
+                    if (value) module = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('Or type new module name')
+                .setValue(module)
+                .onChange(value => {
+                    if (value) module = value;
+                }));
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText('Save')
+                .setCta()
+                .onClick(async () => {
+                    if (!subjectNumber || !subjectName) {
+                        new Notice('Subject number and name are required!');
+                        return;
+                    }
+                    await this.plugin.editSubject(this.subject, subjectNumber, subjectName, teacher, module);
+                    this.close();
+                }));
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+class SelectSubjectModal extends SuggestModal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    getSuggestions(query) {
+        return this.plugin.subjects.filter(s => 
+            s.folderName.toLowerCase().includes(query.toLowerCase()) ||
+            s.teacher.toLowerCase().includes(query.toLowerCase()) ||
+            s.module.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+
+    renderSuggestion(subject, el) {
+        el.createEl('div', { text: subject.folderName });
+        el.createEl('small', { text: `Teacher: ${subject.teacher || 'N/A'} | Module: ${subject.module || 'N/A'}` });
+    }
+
+    async onChooseSuggestion(subject) {
+        new EditSubjectModal(this.app, this.plugin, subject).open();
+    }
+}
+
 class DeleteSubjectModal extends SuggestModal {
     constructor(app, plugin) {
         super(app);
@@ -133,6 +246,14 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             name: 'Delete Subject',
             callback: () => {
                 new DeleteSubjectModal(this.app, this).open();
+            }
+        });
+
+        this.addCommand({
+            id: 'edit-subject',
+            name: 'Edit Subject',
+            callback: () => {
+                new SelectSubjectModal(this.app, this).open();
             }
         });
 
@@ -201,6 +322,36 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             await this.saveData();
             
             new Notice(`Subject "${subject.folderName}" deleted successfully!`);
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async editSubject(oldSubject, number, name, teacher, module) {
+        const newFolderName = `${number}-${name}`;
+        
+        try {
+            if (oldSubject.folderName !== newFolderName) {
+                const oldFolder = this.app.vault.getAbstractFileByPath(oldSubject.folderName);
+                if (oldFolder) {
+                    await this.app.vault.rename(oldFolder, newFolderName);
+                }
+            }
+            
+            const index = this.subjects.findIndex(s => s.folderName === oldSubject.folderName);
+            if (index !== -1) {
+                this.subjects[index] = {
+                    ...oldSubject,
+                    number,
+                    name,
+                    folderName: newFolderName,
+                    teacher: teacher || '',
+                    module: module || ''
+                };
+            }
+            
+            await this.saveData();
+            new Notice(`Subject updated successfully!`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
