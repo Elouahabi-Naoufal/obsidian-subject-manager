@@ -661,6 +661,63 @@ class EditExceptionModal extends Modal {
     }
 }
 
+class CreateNoteFromExceptionModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'Create Note from Exception' });
+
+        const allExceptions = [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        this.plugin.subjects.forEach(subject => {
+            if (subject.exceptions && subject.exceptions.length > 0) {
+                subject.exceptions.forEach((exc, index) => {
+                    if (exc.date >= today) {
+                        allExceptions.push({ ...exc, subject, index });
+                    }
+                });
+            }
+        });
+
+        if (allExceptions.length === 0) {
+            contentEl.createEl('p', { text: 'No future exceptions found.' });
+            return;
+        }
+
+        allExceptions.sort((a, b) => a.date.localeCompare(b.date));
+
+        allExceptions.forEach(exc => {
+            const div = contentEl.createDiv({ cls: 'schedule-item', attr: { style: 'padding: 10px; margin: 5px 0; border: 1px solid var(--background-modifier-border); border-radius: 5px;' } });
+            div.createEl('strong', { text: `${exc.subject.name}` });
+            div.createEl('br');
+            div.createEl('span', { text: `Date: ${exc.date} | Day: ${exc.day} | Time: ${exc.time}` });
+            
+            const templates = this.plugin.getTemplates();
+            const setting = new Setting(div);
+            
+            templates.forEach(template => {
+                setting.addButton(btn => btn
+                    .setButtonText(template)
+                    .onClick(async () => {
+                        await this.plugin.createNoteFromException(exc, template);
+                        this.close();
+                    }));
+            });
+        });
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
 class ScheduleViewModal extends Modal {
     constructor(app, plugin) {
         super(app);
@@ -832,6 +889,14 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 new SelectExceptionModal(this.app, this).open();
             }
         });
+
+        this.addCommand({
+            id: 'create-note-from-exception',
+            name: 'Create Note from Exception',
+            callback: () => {
+                new CreateNoteFromExceptionModal(this.app, this).open();
+            }
+        });
     }
 
     async loadSettings() {
@@ -876,6 +941,15 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         const mode = this.scheduleMode;
         const field = mode === 'Ramadan' ? 'timeRamadan' : 'timeNormal';
         return [...new Set(this.subjects.map(s => s[field] || s.time).filter(Boolean))];
+    }
+
+    getTemplates() {
+        const templatesFolder = this.app.vault.getAbstractFileByPath('Templates');
+        if (!templatesFolder || !templatesFolder.children) return [];
+        
+        return templatesFolder.children
+            .filter(file => file.extension === 'md')
+            .map(file => file.basename);
     }
 
     async createSubject(number, name, teacher, module, room, dayNormal, timeNormal, dayRamadan, timeRamadan) {
@@ -1029,6 +1103,52 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 await this.saveData();
                 new Notice(`Exception deleted for ${subject.name}`);
             }
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async createNoteFromException(exception, templateName) {
+        try {
+            const subject = exception.subject;
+            const templatePath = `Templates/${templateName}.md`;
+            const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+            
+            if (!templateFile) {
+                new Notice(`Template not found: ${templatePath}`);
+                return;
+            }
+            
+            let templateContent = await this.app.vault.read(templateFile);
+            
+            // Remove the template code block first
+            templateContent = templateContent.replace(/<%\*[\s\S]*?%>/g, '');
+            
+            // Replace template variables with exception data
+            const mode = this.scheduleMode;
+            templateContent = templateContent.replace(/<% subject\?\.name \|\| '' %>/g, subject.name);
+            templateContent = templateContent.replace(/<% subject\?\.teacher \|\| '' %>/g, subject.teacher || '');
+            templateContent = templateContent.replace(/<% subject\?\.module \|\| '' %>/g, subject.module || '');
+            templateContent = templateContent.replace(/<% subject\?\.room \|\| '' %>/g, subject.room || '');
+            templateContent = templateContent.replace(/<% day \|\| '' %>/g, exception.day);
+            templateContent = templateContent.replace(/<% time \|\| '' %>/g, exception.time);
+            templateContent = templateContent.replace(/<% scheduleMode %>/g, `${mode} (Exception)`);
+            templateContent = templateContent.replace(/<% tp\.date\.now\("YYYY-MM-DD"\) %>/g, exception.date);
+            
+            // Remove all remaining template syntax
+            templateContent = templateContent.replace(/<%[^%]*%>/g, '');
+            
+            const fileName = `${exception.date}-${templateName.replace(/\s+/g, '-')}.md`;
+            const filePath = `${subject.folderName}/${fileName}`;
+            
+            await this.app.vault.create(filePath, templateContent);
+            
+            const file = this.app.vault.getAbstractFileByPath(filePath);
+            if (file) {
+                await this.app.workspace.getLeaf().openFile(file);
+            }
+            
+            new Notice(`Note created: ${fileName}`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
