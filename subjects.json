@@ -12,7 +12,15 @@
     "dayNormal": "Tuesday",
     "timeNormal": "08:30 - 12:15",
     "dayRamadan": "Tuesday",
-    "timeRamadan": "09:15 - 12:10"
+    "timeRamadan": "09:15 - 12:10",
+    "exceptions": [
+      {
+        "date": "2025-02-23",
+        "day": "Monday",
+        "time": "08:30 - 12:15",
+        "subjectFolder": "01-Systeme d'information decisionnel"
+      }
+    ]
   },
   {
     "number": "02",
@@ -27,7 +35,15 @@
     "dayNormal": "Tuesday",
     "timeNormal": "14:00 - 16:00",
     "dayRamadan": "Tuesday",
-    "timeRamadan": "13:00 - 14:30"
+    "timeRamadan": "13:00 - 14:30",
+    "exceptions": [
+      {
+        "date": "2026-02-23",
+        "day": "Monday",
+        "time": "13:00 - 14:30",
+        "subjectFolder": "02-Ecosysteme BigData 1"
+      }
+    ]
   },
   {
     "number": "03",

@@ -409,6 +409,258 @@ class DeleteSubjectModal extends SuggestModal {
     }
 }
 
+class AddExceptionModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'Add Schedule Exception' });
+
+        let selectedSubject = null;
+        let exceptionDate = '';
+        let exceptionDay = '';
+        let exceptionTime = '';
+
+        new Setting(contentEl)
+            .setName('Subject')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select subject --');
+                this.plugin.subjects.forEach(s => {
+                    dropdown.addOption(s.folderName, s.name);
+                });
+                dropdown.onChange(value => {
+                    selectedSubject = this.plugin.subjects.find(s => s.folderName === value);
+                });
+            });
+
+        new Setting(contentEl)
+            .setName('Exception Date')
+            .setDesc('Date of the exception (YYYY-MM-DD)')
+            .addText(text => text
+                .setPlaceholder('2025-03-15')
+                .onChange(value => exceptionDate = value));
+
+        new Setting(contentEl)
+            .setName('New Day')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select day --');
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
+                    dropdown.addOption(d, d)
+                );
+                dropdown.onChange(value => exceptionDay = value);
+            });
+
+        new Setting(contentEl)
+            .setName('New Time')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                const times = this.plugin.getTimes();
+                times.forEach(t => dropdown.addOption(t, t));
+                dropdown.onChange(value => {
+                    if (value) exceptionTime = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('Or type new time')
+                .onChange(value => {
+                    if (value) exceptionTime = value;
+                }));
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText('Add Exception')
+                .setCta()
+                .onClick(async () => {
+                    if (!selectedSubject || !exceptionDate || !exceptionDay || !exceptionTime) {
+                        new Notice('All fields are required!');
+                        return;
+                    }
+                    await this.plugin.addException(selectedSubject, exceptionDate, exceptionDay, exceptionTime);
+                    this.close();
+                }));
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+class ViewExceptionsModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'All Schedule Exceptions' });
+
+        const allExceptions = [];
+        this.plugin.subjects.forEach(subject => {
+            if (subject.exceptions && subject.exceptions.length > 0) {
+                subject.exceptions.forEach(exc => {
+                    allExceptions.push({ ...exc, subject });
+                });
+            }
+        });
+
+        if (allExceptions.length === 0) {
+            contentEl.createEl('p', { text: 'No exceptions found.' });
+            return;
+        }
+
+        allExceptions.sort((a, b) => a.date.localeCompare(b.date));
+
+        allExceptions.forEach(exc => {
+            const div = contentEl.createDiv({ cls: 'schedule-item', attr: { style: 'padding: 10px; margin: 5px 0; border: 1px solid var(--background-modifier-border); border-radius: 5px;' } });
+            div.createEl('strong', { text: `${exc.subject.name}` });
+            div.createEl('br');
+            div.createEl('span', { text: `Date: ${exc.date} | Day: ${exc.day} | Time: ${exc.time}` });
+        });
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+class SelectExceptionModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'Select Exception' });
+
+        const allExceptions = [];
+        this.plugin.subjects.forEach(subject => {
+            if (subject.exceptions && subject.exceptions.length > 0) {
+                subject.exceptions.forEach((exc, index) => {
+                    allExceptions.push({ ...exc, subject, index });
+                });
+            }
+        });
+
+        if (allExceptions.length === 0) {
+            contentEl.createEl('p', { text: 'No exceptions found.' });
+            return;
+        }
+
+        allExceptions.sort((a, b) => a.date.localeCompare(b.date));
+
+        allExceptions.forEach(exc => {
+            const div = contentEl.createDiv({ cls: 'schedule-item', attr: { style: 'padding: 10px; margin: 5px 0; border: 1px solid var(--background-modifier-border); border-radius: 5px; cursor: pointer;' } });
+            div.createEl('strong', { text: `${exc.subject.name}` });
+            div.createEl('br');
+            div.createEl('span', { text: `Date: ${exc.date} | Day: ${exc.day} | Time: ${exc.time}` });
+            
+            new Setting(div)
+                .addButton(btn => btn
+                    .setButtonText('Edit')
+                    .onClick(() => {
+                        this.close();
+                        new EditExceptionModal(this.app, this.plugin, exc, exc.subject, exc.index).open();
+                    }))
+                .addButton(btn => btn
+                    .setButtonText('Delete')
+                    .setWarning()
+                    .onClick(async () => {
+                        await this.plugin.deleteException(exc.subject, exc.index);
+                        this.close();
+                        new SelectExceptionModal(this.app, this.plugin).open();
+                    }));
+        });
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+class EditExceptionModal extends Modal {
+    constructor(app, plugin, exception, subject, index) {
+        super(app);
+        this.plugin = plugin;
+        this.exception = exception;
+        this.subject = subject;
+        this.index = index;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: `Edit Exception - ${this.subject.name}` });
+
+        let exceptionDate = this.exception.date;
+        let exceptionDay = this.exception.day;
+        let exceptionTime = this.exception.time;
+
+        new Setting(contentEl)
+            .setName('Exception Date')
+            .addText(text => text
+                .setValue(exceptionDate)
+                .onChange(value => exceptionDate = value));
+
+        new Setting(contentEl)
+            .setName('New Day')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select day --');
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
+                    dropdown.addOption(d, d)
+                );
+                dropdown.setValue(exceptionDay);
+                dropdown.onChange(value => exceptionDay = value);
+            });
+
+        new Setting(contentEl)
+            .setName('New Time')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                const times = this.plugin.getTimes();
+                times.forEach(t => dropdown.addOption(t, t));
+                dropdown.setValue(exceptionTime);
+                dropdown.onChange(value => {
+                    if (value) exceptionTime = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('Or type new time')
+                .setValue(exceptionTime)
+                .onChange(value => {
+                    if (value) exceptionTime = value;
+                }));
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText('Save')
+                .setCta()
+                .onClick(async () => {
+                    await this.plugin.editException(this.subject, this.index, exceptionDate, exceptionDay, exceptionTime);
+                    this.close();
+                }));
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
 class ScheduleViewModal extends Modal {
     constructor(app, plugin) {
         super(app);
@@ -426,10 +678,26 @@ class ScheduleViewModal extends Modal {
         const dayField = mode === 'Ramadan' ? 'dayRamadan' : 'dayNormal';
         const timeField = mode === 'Ramadan' ? 'timeRamadan' : 'timeNormal';
         
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        
         days.forEach(day => {
             const daySubjects = this.plugin.subjects.filter(s => s[dayField] === day);
             
-            if (daySubjects.length > 0) {
+            // Get exceptions for this day (only future/today)
+            const exceptions = [];
+            this.plugin.subjects.forEach(s => {
+                if (s.exceptions) {
+                    s.exceptions.forEach(exc => {
+                        if (exc.day === day && exc.date >= todayStr) {
+                            exceptions.push({ ...exc, subject: s });
+                        }
+                    });
+                }
+            });
+            
+            if (daySubjects.length > 0 || exceptions.length > 0) {
                 contentEl.createEl('h3', { text: day });
                 
                 daySubjects.sort((a, b) => (a[timeField] || '').localeCompare(b[timeField] || ''));
@@ -440,6 +708,15 @@ class ScheduleViewModal extends Modal {
                     div.createEl('span', { text: ` - ${subject.name}` });
                     div.createEl('br');
                     div.createEl('small', { text: `Teacher: ${subject.teacher || 'N/A'} | Room: ${subject.room || 'N/A'}` });
+                });
+                
+                // Show exceptions
+                exceptions.forEach(exc => {
+                    const div = contentEl.createDiv({ cls: 'schedule-item', attr: { style: 'background-color: var(--background-modifier-error-hover); padding: 5px; margin: 5px 0; border-radius: 3px;' } });
+                    div.createEl('strong', { text: `⚠️ ${exc.time}` });
+                    div.createEl('span', { text: ` - ${exc.subject.name} (Exception: ${exc.date})` });
+                    div.createEl('br');
+                    div.createEl('small', { text: `Teacher: ${exc.subject.teacher || 'N/A'} | Room: ${exc.subject.room || 'N/A'}` });
                 });
             }
         });
@@ -530,6 +807,30 @@ module.exports = class SubjectManagerPlugin extends Plugin {
 
         this.addRibbonIcon('calendar-clock', 'View Schedule', () => {
             new ScheduleViewModal(this.app, this).open();
+        });
+
+        this.addCommand({
+            id: 'add-exception',
+            name: 'Add Schedule Exception',
+            callback: () => {
+                new AddExceptionModal(this.app, this).open();
+            }
+        });
+
+        this.addCommand({
+            id: 'view-exceptions',
+            name: 'View All Exceptions',
+            callback: () => {
+                new ViewExceptionsModal(this.app, this).open();
+            }
+        });
+
+        this.addCommand({
+            id: 'manage-exceptions',
+            name: 'Edit/Delete Exceptions',
+            callback: () => {
+                new SelectExceptionModal(this.app, this).open();
+            }
         });
     }
 
@@ -676,6 +977,58 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             }
             
             new Notice(`Applied! Created: ${created}`);
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async addException(subject, date, day, time) {
+        try {
+            const index = this.subjects.findIndex(s => s.folderName === subject.folderName);
+            if (index !== -1) {
+                if (!this.subjects[index].exceptions) {
+                    this.subjects[index].exceptions = [];
+                }
+                this.subjects[index].exceptions.push({
+                    date,
+                    day,
+                    time,
+                    subjectFolder: subject.folderName
+                });
+                await this.saveData();
+                new Notice(`Exception added for ${subject.name} on ${date}`);
+            }
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async editException(subject, index, date, day, time) {
+        try {
+            const subjectIndex = this.subjects.findIndex(s => s.folderName === subject.folderName);
+            if (subjectIndex !== -1 && this.subjects[subjectIndex].exceptions) {
+                this.subjects[subjectIndex].exceptions[index] = {
+                    date,
+                    day,
+                    time,
+                    subjectFolder: subject.folderName
+                };
+                await this.saveData();
+                new Notice(`Exception updated for ${subject.name}`);
+            }
+        } catch (error) {
+            new Notice(`Error: ${error.message}`);
+        }
+    }
+
+    async deleteException(subject, index) {
+        try {
+            const subjectIndex = this.subjects.findIndex(s => s.folderName === subject.folderName);
+            if (subjectIndex !== -1 && this.subjects[subjectIndex].exceptions) {
+                this.subjects[subjectIndex].exceptions.splice(index, 1);
+                await this.saveData();
+                new Notice(`Exception deleted for ${subject.name}`);
+            }
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
