@@ -10,9 +10,9 @@
     "day": "Tuesday",
     "time": "9:15 - 12:10",
     "dayNormal": "Tuesday",
-    "timeNormal": "9:15 - 12:10",
+    "timeNormal": "08:30 - 12:15",
     "dayRamadan": "Tuesday",
-    "timeRamadan": "9:15 - 12:10"
+    "timeRamadan": "09:15 - 12:10"
   },
   {
     "number": "02",
@@ -23,7 +23,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Tuesday",
-    "time": "13:00 - 14:15"
+    "time": "13:00 - 14:15",
+    "dayNormal": "Tuesday",
+    "timeNormal": "14:00 - 16:00",
+    "dayRamadan": "Tuesday",
+    "timeRamadan": "13:00 - 14:30"
   },
   {
     "number": "03",
@@ -34,7 +38,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Wednesday",
-    "time": "13:00 - 14:15"
+    "time": "13:00 - 14:15",
+    "dayNormal": "Wednesday",
+    "timeNormal": "14:30 - 16:00",
+    "dayRamadan": "Wednesday",
+    "timeRamadan": "13:00 - 14:15"
   },
   {
     "number": "04",
@@ -45,7 +53,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Wednesday",
-    "time": "14:25 - 15:55"
+    "time": "14:25 - 15:55",
+    "dayNormal": "Wednesday",
+    "timeNormal": "16:15 - 18:15",
+    "dayRamadan": "Wednesday",
+    "timeRamadan": "14:25 - 15:55"
   },
   {
     "number": "05",
@@ -56,7 +68,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Friday",
-    "time": "13:45 - 15:00 "
+    "time": "13:45 - 15:00 ",
+    "dayNormal": "Friday",
+    "timeNormal": "14:30 - 16:00",
+    "dayRamadan": "Friday",
+    "timeRamadan": "13:45 - 15:00"
   },
   {
     "number": "06",
@@ -67,7 +83,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Thursday",
-    "time": "9:15 - 12:10"
+    "time": "9:15 - 12:10",
+    "dayNormal": "Thursday",
+    "timeNormal": "08:30 - 10:30",
+    "dayRamadan": "Thursday",
+    "timeRamadan": "09:15 - 10:45"
   },
   {
     "number": "07",
@@ -78,7 +98,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "",
     "day": "",
-    "time": ""
+    "time": "",
+    "dayNormal": "",
+    "timeNormal": "",
+    "dayRamadan": "",
+    "timeRamadan": ""
   },
   {
     "number": "08",
@@ -89,7 +113,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Monday",
-    "time": "9:15 - 12:10"
+    "time": "9:15 - 12:10",
+    "dayNormal": "Monday",
+    "timeNormal": "08:30 - 12:15",
+    "dayRamadan": "Monday",
+    "timeRamadan": "09:15 - 12:10"
   },
   {
     "number": "09",
@@ -100,7 +128,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Thursday",
-    "time": "13:00 - 14:15"
+    "time": "13:00 - 14:15",
+    "dayNormal": "Thursday",
+    "timeNormal": "14:30 - 16:00",
+    "dayRamadan": "Thursday",
+    "timeRamadan": "13:00 - 14:15"
   },
   {
     "number": "10",
@@ -111,7 +143,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Thursday",
-    "time": "14:25 - 15:40"
+    "time": "14:25 - 15:40",
+    "dayNormal": "Thursday",
+    "timeNormal": "16:15 - 17:45",
+    "dayRamadan": "Thursday",
+    "timeRamadan": "14:25 - 15:40"
   },
   {
     "number": "11",
@@ -122,7 +158,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Friday",
-    "time": "10:55 - 12:10"
+    "time": "10:55 - 12:10",
+    "dayNormal": "Friday",
+    "timeNormal": "10:45 - 12:15",
+    "dayRamadan": "Friday",
+    "timeRamadan": "10:55 - 12:10"
   },
   {
     "number": "12",
@@ -133,6 +173,10 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Thursday",
-    "time": "10:55 - 12:10"
+    "time": "10:55 - 12:10",
+    "dayNormal": "Thursday",
+    "timeNormal": "10:45 - 12:15",
+    "dayRamadan": "Thursday",
+    "timeRamadan": "10:55 - 12:10"
   }
 ]

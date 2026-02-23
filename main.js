@@ -409,6 +409,52 @@ class DeleteSubjectModal extends SuggestModal {
     }
 }
 
+class ScheduleViewModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        
+        const mode = this.plugin.scheduleMode;
+        contentEl.createEl('h2', { text: `Schedule - ${mode} Mode` });
+        
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayField = mode === 'Ramadan' ? 'dayRamadan' : 'dayNormal';
+        const timeField = mode === 'Ramadan' ? 'timeRamadan' : 'timeNormal';
+        
+        days.forEach(day => {
+            const daySubjects = this.plugin.subjects.filter(s => s[dayField] === day);
+            
+            if (daySubjects.length > 0) {
+                contentEl.createEl('h3', { text: day });
+                
+                daySubjects.sort((a, b) => (a[timeField] || '').localeCompare(b[timeField] || ''));
+                
+                daySubjects.forEach(subject => {
+                    const div = contentEl.createDiv({ cls: 'schedule-item' });
+                    div.createEl('strong', { text: `${subject[timeField] || 'No time'}` });
+                    div.createEl('span', { text: ` - ${subject.name}` });
+                    div.createEl('br');
+                    div.createEl('small', { text: `Teacher: ${subject.teacher || 'N/A'} | Room: ${subject.room || 'N/A'}` });
+                });
+            }
+        });
+        
+        if (this.plugin.subjects.every(s => !s[dayField])) {
+            contentEl.createEl('p', { text: 'No schedule available for this mode.' });
+        }
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
 module.exports = class SubjectManagerPlugin extends Plugin {
     async onload() {
         await this.loadData();
@@ -472,6 +518,18 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             callback: () => {
                 new SelectSubjectModal(this.app, this, true).open();
             }
+        });
+
+        this.addCommand({
+            id: 'view-schedule',
+            name: 'View Schedule',
+            callback: () => {
+                new ScheduleViewModal(this.app, this).open();
+            }
+        });
+
+        this.addRibbonIcon('calendar-clock', 'View Schedule', () => {
+            new ScheduleViewModal(this.app, this).open();
         });
     }
 
