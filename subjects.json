@@ -8,7 +8,11 @@
     "dateCreated": "2026-02-18T15:37:43.193Z",
     "room": "SC-73",
     "day": "Tuesday",
-    "time": "9:15 - 12:10"
+    "time": "9:15 - 12:10",
+    "dayNormal": "Tuesday",
+    "timeNormal": "9:15 - 12:10",
+    "dayRamadan": "Tuesday",
+    "timeRamadan": "9:15 - 12:10"
   },
   {
     "number": "02",

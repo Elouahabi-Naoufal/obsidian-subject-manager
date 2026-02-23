@@ -11,13 +11,18 @@ class SubjectManagerModal extends Modal {
         contentEl.empty();
         contentEl.createEl('h2', { text: 'Create New Subject' });
 
+        const mode = this.plugin.scheduleMode;
+        contentEl.createEl('p', { text: `Current schedule: ${mode}`, cls: 'mod-warning' });
+
         let subjectNumber = '';
         let subjectName = '';
         let teacher = '';
         let module = '';
         let room = '';
-        let day = '';
-        let time = '';
+        let dayNormal = '';
+        let timeNormal = '';
+        let dayRamadan = '';
+        let timeRamadan = '';
 
         new Setting(contentEl)
             .setName('Subject Number')
@@ -90,23 +95,23 @@ class SubjectManagerModal extends Modal {
                 }));
 
         new Setting(contentEl)
-            .setName('Day')
+            .setName('Day (Normal)')
             .addDropdown(dropdown => {
                 dropdown.addOption('', '-- Select day --');
                 ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
                     dropdown.addOption(d, d)
                 );
-                dropdown.onChange(value => day = value);
+                dropdown.onChange(value => dayNormal = value);
             });
 
         new Setting(contentEl)
-            .setName('Time')
+            .setName('Time (Normal)')
             .addDropdown(dropdown => {
                 dropdown.addOption('', '-- Select or type below --');
                 const times = this.plugin.getTimes();
                 times.forEach(t => dropdown.addOption(t, t));
                 dropdown.onChange(value => {
-                    if (value) time = value;
+                    if (value) timeNormal = value;
                 });
             });
 
@@ -114,7 +119,35 @@ class SubjectManagerModal extends Modal {
             .addText(text => text
                 .setPlaceholder('e.g., 08:00-10:00')
                 .onChange(value => {
-                    if (value) time = value;
+                    if (value) timeNormal = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Day (Ramadan)')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select day --');
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
+                    dropdown.addOption(d, d)
+                );
+                dropdown.onChange(value => dayRamadan = value);
+            });
+
+        new Setting(contentEl)
+            .setName('Time (Ramadan)')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                const times = this.plugin.getTimes();
+                times.forEach(t => dropdown.addOption(t, t));
+                dropdown.onChange(value => {
+                    if (value) timeRamadan = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('e.g., 08:00-10:00')
+                .onChange(value => {
+                    if (value) timeRamadan = value;
                 }));
 
         new Setting(contentEl)
@@ -126,7 +159,7 @@ class SubjectManagerModal extends Modal {
                         new Notice('Subject number and name are required!');
                         return;
                     }
-                    await this.plugin.createSubject(subjectNumber, subjectName, teacher, module, room, day, time);
+                    await this.plugin.createSubject(subjectNumber, subjectName, teacher, module, room, dayNormal, timeNormal, dayRamadan, timeRamadan);
                     this.close();
                 }));
     }
@@ -150,13 +183,18 @@ class EditSubjectModal extends Modal {
         contentEl.empty();
         contentEl.createEl('h2', { text: 'Edit Subject' });
 
+        const mode = this.plugin.scheduleMode;
+        contentEl.createEl('p', { text: `Current schedule: ${mode}`, cls: 'mod-warning' });
+
         let subjectNumber = this.subject.number;
         let subjectName = this.subject.name;
         let teacher = this.subject.teacher;
         let module = this.subject.module;
         let room = this.subject.room || '';
-        let day = this.subject.day || '';
-        let time = this.subject.time || '';
+        let dayNormal = this.subject.dayNormal || this.subject.day || '';
+        let timeNormal = this.subject.timeNormal || this.subject.time || '';
+        let dayRamadan = this.subject.dayRamadan || '';
+        let timeRamadan = this.subject.timeRamadan || '';
 
         new Setting(contentEl)
             .setName('Subject Number')
@@ -231,34 +269,65 @@ class EditSubjectModal extends Modal {
                 }));
 
         new Setting(contentEl)
-            .setName('Day')
+            .setName('Day (Normal)')
             .addDropdown(dropdown => {
                 dropdown.addOption('', '-- Select day --');
                 ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
                     dropdown.addOption(d, d)
                 );
-                dropdown.setValue(day);
-                dropdown.onChange(value => day = value);
+                dropdown.setValue(dayNormal);
+                dropdown.onChange(value => dayNormal = value);
             });
 
         new Setting(contentEl)
-            .setName('Time')
+            .setName('Time (Normal)')
             .addDropdown(dropdown => {
                 dropdown.addOption('', '-- Select or type below --');
                 const times = this.plugin.getTimes();
                 times.forEach(t => dropdown.addOption(t, t));
-                dropdown.setValue(time);
+                dropdown.setValue(timeNormal);
                 dropdown.onChange(value => {
-                    if (value) time = value;
+                    if (value) timeNormal = value;
                 });
             });
 
         new Setting(contentEl)
             .addText(text => text
                 .setPlaceholder('e.g., 08:00-10:00')
-                .setValue(time)
+                .setValue(timeNormal)
                 .onChange(value => {
-                    if (value) time = value;
+                    if (value) timeNormal = value;
+                }));
+
+        new Setting(contentEl)
+            .setName('Day (Ramadan)')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select day --');
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => 
+                    dropdown.addOption(d, d)
+                );
+                dropdown.setValue(dayRamadan);
+                dropdown.onChange(value => dayRamadan = value);
+            });
+
+        new Setting(contentEl)
+            .setName('Time (Ramadan)')
+            .addDropdown(dropdown => {
+                dropdown.addOption('', '-- Select or type below --');
+                const times = this.plugin.getTimes();
+                times.forEach(t => dropdown.addOption(t, t));
+                dropdown.setValue(timeRamadan);
+                dropdown.onChange(value => {
+                    if (value) timeRamadan = value;
+                });
+            });
+
+        new Setting(contentEl)
+            .addText(text => text
+                .setPlaceholder('e.g., 08:00-10:00')
+                .setValue(timeRamadan)
+                .onChange(value => {
+                    if (value) timeRamadan = value;
                 }));
 
         new Setting(contentEl)
@@ -270,7 +339,7 @@ class EditSubjectModal extends Modal {
                         new Notice('Subject number and name are required!');
                         return;
                     }
-                    await this.plugin.editSubject(this.subject, subjectNumber, subjectName, teacher, module, room, day, time);
+                    await this.plugin.editSubject(this.subject, subjectNumber, subjectName, teacher, module, room, dayNormal, timeNormal, dayRamadan, timeRamadan);
                     if (this.keepOpen) {
                         new SelectSubjectModal(this.app, this.plugin, true).open();
                     }
@@ -343,6 +412,23 @@ class DeleteSubjectModal extends SuggestModal {
 module.exports = class SubjectManagerPlugin extends Plugin {
     async onload() {
         await this.loadData();
+        await this.loadSettings();
+
+        this.addCommand({
+            id: 'toggle-schedule',
+            name: 'Toggle Schedule Mode',
+            callback: async () => {
+                this.scheduleMode = this.scheduleMode === 'Normal' ? 'Ramadan' : 'Normal';
+                await this.saveSettings();
+                new Notice(`Switched to ${this.scheduleMode} schedule`);
+            }
+        });
+
+        this.addRibbonIcon('calendar', 'Toggle Schedule', async () => {
+            this.scheduleMode = this.scheduleMode === 'Normal' ? 'Ramadan' : 'Normal';
+            await this.saveSettings();
+            new Notice(`Switched to ${this.scheduleMode} schedule`);
+        });
 
         this.addCommand({
             id: 'create-subject',
@@ -389,6 +475,19 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         });
     }
 
+    async loadSettings() {
+        try {
+            const data = await this.app.vault.adapter.read('.obsidian/plugins/subject-manager/data.json');
+            this.scheduleMode = JSON.parse(data).scheduleMode || 'Normal';
+        } catch {
+            this.scheduleMode = 'Normal';
+        }
+    }
+
+    async saveSettings() {
+        await this.app.vault.adapter.write('.obsidian/plugins/subject-manager/data.json', JSON.stringify({ scheduleMode: this.scheduleMode }));
+    }
+
     async loadData() {
         try {
             const data = await this.app.vault.adapter.read('.obsidian/plugins/subject-manager/subjects.json');
@@ -415,10 +514,12 @@ module.exports = class SubjectManagerPlugin extends Plugin {
     }
 
     getTimes() {
-        return [...new Set(this.subjects.map(s => s.time).filter(Boolean))];
+        const mode = this.scheduleMode;
+        const field = mode === 'Ramadan' ? 'timeRamadan' : 'timeNormal';
+        return [...new Set(this.subjects.map(s => s[field] || s.time).filter(Boolean))];
     }
 
-    async createSubject(number, name, teacher, module, room, day, time) {
+    async createSubject(number, name, teacher, module, room, dayNormal, timeNormal, dayRamadan, timeRamadan) {
         const folderName = `${number}-${name}`;
         
         try {
@@ -431,8 +532,10 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 teacher: teacher || '',
                 module: module || '',
                 room: room || '',
-                day: day || '',
-                time: time || '',
+                dayNormal: dayNormal || '',
+                timeNormal: timeNormal || '',
+                dayRamadan: dayRamadan || '',
+                timeRamadan: timeRamadan || '',
                 dateCreated: new Date().toISOString()
             };
             
@@ -461,7 +564,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         }
     }
 
-    async editSubject(oldSubject, number, name, teacher, module, room, day, time) {
+    async editSubject(oldSubject, number, name, teacher, module, room, dayNormal, timeNormal, dayRamadan, timeRamadan) {
         const newFolderName = `${number}-${name}`;
         
         try {
@@ -482,8 +585,10 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                     teacher: teacher || '',
                     module: module || '',
                     room: room || '',
-                    day: day || '',
-                    time: time || ''
+                    dayNormal: dayNormal || '',
+                    timeNormal: timeNormal || '',
+                    dayRamadan: dayRamadan || '',
+                    timeRamadan: timeRamadan || ''
                 };
             }
             
@@ -502,19 +607,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 .filter(f => f.children && f.parent?.path === '')
                 .map(f => f.path);
             
-            const jsonFolders = this.subjects.map(s => s.folderName);
-            let deleted = 0, created = 0;
-            
-            // Delete folders with xx- format not in JSON
-            for (const folder of existingFolders) {
-                if (/^\d{2}-/.test(folder) && !jsonFolders.includes(folder)) {
-                    const f = this.app.vault.getAbstractFileByPath(folder);
-                    if (f) {
-                        await this.app.vault.delete(f, true);
-                        deleted++;
-                    }
-                }
-            }
+            let created = 0;
             
             // Create missing folders from JSON
             for (const subject of this.subjects) {
@@ -524,7 +617,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 }
             }
             
-            new Notice(`Applied! Created: ${created}, Deleted: ${deleted}`);
+            new Notice(`Applied! Created: ${created}`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
