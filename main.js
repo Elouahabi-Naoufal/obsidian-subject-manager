@@ -424,6 +424,7 @@ class AddExceptionModal extends Modal {
         let exceptionDate = '';
         let exceptionDay = '';
         let exceptionTime = '';
+        let exceptionType = '';
 
         new Setting(contentEl)
             .setName('Subject')
@@ -473,15 +474,22 @@ class AddExceptionModal extends Modal {
                 }));
 
         new Setting(contentEl)
+            .setName('Exception Type')
+            .setDesc('e.g., Rattrapage, Exam, TD Extra')
+            .addText(text => text
+                .setPlaceholder('Rattrapage')
+                .onChange(value => exceptionType = value));
+
+        new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Add Exception')
                 .setCta()
                 .onClick(async () => {
-                    if (!selectedSubject || !exceptionDate || !exceptionDay || !exceptionTime) {
+                    if (!selectedSubject || !exceptionDate || !exceptionDay || !exceptionTime || !exceptionType) {
                         new Notice('All fields are required!');
                         return;
                     }
-                    await this.plugin.addException(selectedSubject, exceptionDate, exceptionDay, exceptionTime);
+                    await this.plugin.addException(selectedSubject, exceptionDate, exceptionDay, exceptionTime, exceptionType);
                     this.close();
                 }));
     }
@@ -504,11 +512,10 @@ class ViewExceptionsModal extends Modal {
         contentEl.createEl('h2', { text: 'All Schedule Exceptions' });
 
         const allExceptions = [];
-        this.plugin.subjects.forEach(subject => {
-            if (subject.exceptions && subject.exceptions.length > 0) {
-                subject.exceptions.forEach(exc => {
-                    allExceptions.push({ ...exc, subject });
-                });
+        this.exceptions.forEach(exc => {
+            const subject = this.plugin.subjects.find(s => s.folderName === exc.subjectFolder);
+            if (subject) {
+                allExceptions.push({ ...exc, subject });
             }
         });
 
@@ -523,7 +530,7 @@ class ViewExceptionsModal extends Modal {
             const div = contentEl.createDiv({ cls: 'schedule-item', attr: { style: 'padding: 10px; margin: 5px 0; border: 1px solid var(--background-modifier-border); border-radius: 5px;' } });
             div.createEl('strong', { text: `${exc.subject.name}` });
             div.createEl('br');
-            div.createEl('span', { text: `Date: ${exc.date} | Day: ${exc.day} | Time: ${exc.time}` });
+            div.createEl('span', { text: `Date: ${exc.date} | Day: ${exc.day} | Time: ${exc.time} | Type: ${exc.type || 'N/A'}` });
         });
     }
 
@@ -545,11 +552,10 @@ class SelectExceptionModal extends Modal {
         contentEl.createEl('h2', { text: 'Select Exception' });
 
         const allExceptions = [];
-        this.plugin.subjects.forEach(subject => {
-            if (subject.exceptions && subject.exceptions.length > 0) {
-                subject.exceptions.forEach((exc, index) => {
-                    allExceptions.push({ ...exc, subject, index });
-                });
+        this.plugin.exceptions.forEach((exc, index) => {
+            const subject = this.plugin.subjects.find(s => s.folderName === exc.subjectFolder);
+            if (subject) {
+                allExceptions.push({ ...exc, subject, index });
             }
         });
 
@@ -607,6 +613,7 @@ class EditExceptionModal extends Modal {
         let exceptionDate = this.exception.date;
         let exceptionDay = this.exception.day;
         let exceptionTime = this.exception.time;
+        let exceptionType = this.exception.type || '';
 
         new Setting(contentEl)
             .setName('Exception Date')
@@ -646,11 +653,17 @@ class EditExceptionModal extends Modal {
                 }));
 
         new Setting(contentEl)
+            .setName('Exception Type')
+            .addText(text => text
+                .setValue(exceptionType)
+                .onChange(value => exceptionType = value));
+
+        new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Save')
                 .setCta()
                 .onClick(async () => {
-                    await this.plugin.editException(this.subject, this.index, exceptionDate, exceptionDay, exceptionTime);
+                    await this.plugin.editException(this.subject, this.index, exceptionDate, exceptionDay, exceptionTime, exceptionType);
                     this.close();
                 }));
     }
@@ -675,13 +688,12 @@ class CreateNoteFromExceptionModal extends Modal {
         const allExceptions = [];
         const today = new Date().toISOString().split('T')[0];
         
-        this.plugin.subjects.forEach(subject => {
-            if (subject.exceptions && subject.exceptions.length > 0) {
-                subject.exceptions.forEach((exc, index) => {
-                    if (exc.date >= today) {
-                        allExceptions.push({ ...exc, subject, index });
-                    }
-                });
+        this.plugin.exceptions.forEach((exc, index) => {
+            if (exc.date >= today) {
+                const subject = this.plugin.subjects.find(s => s.folderName === exc.subjectFolder);
+                if (subject) {
+                    allExceptions.push({ ...exc, subject, index });
+                }
             }
         });
 
@@ -744,13 +756,12 @@ class ScheduleViewModal extends Modal {
             
             // Get exceptions for this day (only future/today)
             const exceptions = [];
-            this.plugin.subjects.forEach(s => {
-                if (s.exceptions) {
-                    s.exceptions.forEach(exc => {
-                        if (exc.day === day && exc.date >= todayStr) {
-                            exceptions.push({ ...exc, subject: s });
-                        }
-                    });
+            this.plugin.exceptions.forEach(exc => {
+                if (exc.day === day && exc.date >= todayStr) {
+                    const subject = this.plugin.subjects.find(s => s.folderName === exc.subjectFolder);
+                    if (subject) {
+                        exceptions.push({ ...exc, subject });
+                    }
                 }
             });
             
@@ -771,7 +782,7 @@ class ScheduleViewModal extends Modal {
                 exceptions.forEach(exc => {
                     const div = contentEl.createDiv({ cls: 'schedule-item', attr: { style: 'background-color: var(--background-modifier-error-hover); padding: 5px; margin: 5px 0; border-radius: 3px;' } });
                     div.createEl('strong', { text: `⚠️ ${exc.time}` });
-                    div.createEl('span', { text: ` - ${exc.subject.name} (Exception: ${exc.date})` });
+                    div.createEl('span', { text: ` - ${exc.subject.name} (${exc.type || 'Exception'}: ${exc.date})` });
                     div.createEl('br');
                     div.createEl('small', { text: `Teacher: ${exc.subject.teacher || 'N/A'} | Room: ${exc.subject.room || 'N/A'}` });
                 });
@@ -919,10 +930,21 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         } catch {
             this.subjects = [];
         }
+        
+        try {
+            const data = await this.app.vault.adapter.read('.obsidian/plugins/subject-manager/exceptions.json');
+            this.exceptions = JSON.parse(data);
+        } catch {
+            this.exceptions = [];
+        }
     }
 
     async saveData() {
         await this.app.vault.adapter.write('.obsidian/plugins/subject-manager/subjects.json', JSON.stringify(this.subjects, null, 2));
+    }
+
+    async saveExceptions() {
+        await this.app.vault.adapter.write('.obsidian/plugins/subject-manager/exceptions.json', JSON.stringify(this.exceptions, null, 2));
     }
 
     getTeachers() {
@@ -1056,38 +1078,33 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         }
     }
 
-    async addException(subject, date, day, time) {
+    async addException(subject, date, day, time, type) {
         try {
-            const index = this.subjects.findIndex(s => s.folderName === subject.folderName);
-            if (index !== -1) {
-                if (!this.subjects[index].exceptions) {
-                    this.subjects[index].exceptions = [];
-                }
-                this.subjects[index].exceptions.push({
-                    date,
-                    day,
-                    time,
-                    subjectFolder: subject.folderName
-                });
-                await this.saveData();
-                new Notice(`Exception added for ${subject.name} on ${date}`);
-            }
+            this.exceptions.push({
+                date,
+                day,
+                time,
+                type,
+                subjectFolder: subject.folderName
+            });
+            await this.saveExceptions();
+            new Notice(`Exception added for ${subject.name} on ${date}`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
     }
 
-    async editException(subject, index, date, day, time) {
+    async editException(subject, index, date, day, time, type) {
         try {
-            const subjectIndex = this.subjects.findIndex(s => s.folderName === subject.folderName);
-            if (subjectIndex !== -1 && this.subjects[subjectIndex].exceptions) {
-                this.subjects[subjectIndex].exceptions[index] = {
+            if (this.exceptions[index]) {
+                this.exceptions[index] = {
                     date,
                     day,
                     time,
+                    type,
                     subjectFolder: subject.folderName
                 };
-                await this.saveData();
+                await this.saveExceptions();
                 new Notice(`Exception updated for ${subject.name}`);
             }
         } catch (error) {
@@ -1097,12 +1114,9 @@ module.exports = class SubjectManagerPlugin extends Plugin {
 
     async deleteException(subject, index) {
         try {
-            const subjectIndex = this.subjects.findIndex(s => s.folderName === subject.folderName);
-            if (subjectIndex !== -1 && this.subjects[subjectIndex].exceptions) {
-                this.subjects[subjectIndex].exceptions.splice(index, 1);
-                await this.saveData();
-                new Notice(`Exception deleted for ${subject.name}`);
-            }
+            this.exceptions.splice(index, 1);
+            await this.saveExceptions();
+            new Notice(`Exception deleted for ${subject.name}`);
         } catch (error) {
             new Notice(`Error: ${error.message}`);
         }
@@ -1132,7 +1146,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             templateContent = templateContent.replace(/<% subject\?\.room \|\| '' %>/g, subject.room || '');
             templateContent = templateContent.replace(/<% day \|\| '' %>/g, exception.day);
             templateContent = templateContent.replace(/<% time \|\| '' %>/g, exception.time);
-            templateContent = templateContent.replace(/<% scheduleMode %>/g, `${mode} (Exception)`);
+            templateContent = templateContent.replace(/<% scheduleMode %>/g, `${mode} (Exception: ${exception.type || 'N/A'})`);
             templateContent = templateContent.replace(/<% tp\.date\.now\("YYYY-MM-DD"\) %>/g, exception.date);
             
             // Remove all remaining template syntax
