@@ -731,10 +731,11 @@ class CreateNoteFromExceptionModal extends Modal {
 }
 
 class ManageGroupModal extends Modal {
-    constructor(app, plugin, subject) {
+    constructor(app, plugin, subject, keepOpen = false) {
         super(app);
         this.plugin = plugin;
         this.subject = subject;
+        this.keepOpen = keepOpen;
     }
 
     onOpen() {
@@ -746,7 +747,7 @@ class ManageGroupModal extends Modal {
         let groupName = existing.groupName || '';
         let projectTitle = existing.projectTitle || '';
         let members = [...(existing.members || [])];
-        let tasks = [...(existing.tasks || [])];
+        let tasks = (existing.tasks || []).map(t => ({ ...t }));
 
         new Setting(contentEl)
             .setName('Group Name')
@@ -793,10 +794,7 @@ class ManageGroupModal extends Modal {
                 const val = newMember.trim();
                 if (val && !members.includes(val)) {
                     members.push(val);
-                    // refresh dropdown with new name
-                    if (memberDropdown) {
-                        memberDropdown.addOption(val, val);
-                    }
+                    if (memberDropdown) memberDropdown.addOption(val, val);
                     newMember = '';
                     if (memberText) memberText.setValue('');
                     if (memberDropdown) memberDropdown.setValue('');
@@ -813,7 +811,10 @@ class ManageGroupModal extends Modal {
             tasks.forEach((t, i) => {
                 new Setting(tasksContainer)
                     .setName(t.text)
-                    .addToggle(toggle => toggle.setValue(t.done).onChange(v => { tasks[i].done = v; }))
+                    .addToggle(toggle => toggle
+                        .setValue(t.done)
+                        .setTooltip(t.done ? 'Mark incomplete' : 'Mark complete')
+                        .onChange(v => { tasks[i].done = v; }))
                     .addButton(btn => btn.setButtonText('Remove').setWarning().onClick(() => {
                         tasks.splice(i, 1);
                         renderTasks();
@@ -850,11 +851,71 @@ class ManageGroupModal extends Modal {
                 }
             }));
 
-        new Setting(contentEl)
+        const btnSetting = new Setting(contentEl)
             .addButton(btn => btn.setButtonText('Save').setCta().onClick(async () => {
                 await this.plugin.saveGroup(this.subject.folderName, { groupName, projectTitle, members, tasks });
+                if (this.keepOpen) new GroupManagerModal(this.app, this.plugin).open();
                 this.close();
             }));
+
+        if (this.keepOpen) {
+            btnSetting.addButton(btn => btn.setButtonText('Back without saving').onClick(() => {
+                new GroupManagerModal(this.app, this.plugin).open();
+                this.close();
+            }));
+        }
+    }
+
+    onClose() { this.contentEl.empty(); }
+}
+
+class GroupManagerModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'Group Manager' });
+
+        this.plugin.subjects.forEach(subject => {
+            const g = this.plugin.groups[subject.folderName];
+            const div = contentEl.createDiv({ attr: { style: 'padding:8px 10px;margin:5px 0;border:1px solid var(--background-modifier-border);border-radius:6px;' } });
+
+            const info = div.createDiv({ attr: { style: 'margin-bottom:4px;' } });
+            info.createEl('strong', { text: subject.name });
+            if (g) {
+                info.createEl('span', { text: ` — ${g.groupName || '?'} | ${g.projectTitle || 'No project'}`, attr: { style: 'color:var(--text-muted);font-size:13px;' } });
+                if (g.members?.length) {
+                    info.createEl('div', { text: `👥 ${g.members.join(', ')}`, attr: { style: 'font-size:12px;color:var(--text-muted);' } });
+                }
+                if (g.tasks?.length) {
+                    const done = g.tasks.filter(t => t.done).length;
+                    info.createEl('div', { text: `📋 ${done}/${g.tasks.length} tasks done`, attr: { style: 'font-size:12px;color:var(--text-muted);' } });
+                }
+            } else {
+                info.createEl('span', { text: ' — No group set', attr: { style: 'color:var(--text-muted);font-size:13px;' } });
+            }
+
+            new Setting(div)
+                .addButton(btn => btn.setButtonText(g ? 'Edit' : 'Add').setCta().onClick(() => {
+                    this.close();
+                    new ManageGroupModal(this.app, this.plugin, subject, true).open();
+                }))
+                .addButton(btn => {
+                    btn.setButtonText('Delete').setWarning().setDisabled(!g).onClick(async () => {
+                        delete this.plugin.groups[subject.folderName];
+                        await this.plugin.saveGroups();
+                        new Notice(`Group deleted for ${subject.name}`);
+                        this.onOpen();
+                    });
+                });
+        });
+
+        new Setting(contentEl)
+            .addButton(btn => btn.setButtonText('Close').onClick(() => this.close()));
     }
 
     onClose() { this.contentEl.empty(); }
@@ -1107,7 +1168,7 @@ module.exports = class SubjectManagerPlugin extends Plugin {
             id: 'manage-group',
             name: 'Manage Group',
             callback: () => {
-                new SelectSubjectForGroupModal(this.app, this).open();
+                new GroupManagerModal(this.app, this).open();
             }
         });
 
@@ -1178,11 +1239,15 @@ module.exports = class SubjectManagerPlugin extends Plugin {
 
     async saveGroup(folderName, groupData) {
         this.groups[folderName] = groupData;
+        await this.saveGroups();
+        new Notice(`Group saved for ${folderName}`);
+    }
+
+    async saveGroups() {
         await this.app.vault.adapter.write(
             '.obsidian/plugins/subject-manager/groups.json',
             JSON.stringify(this.groups, null, 2)
         );
-        new Notice(`Group saved for ${folderName}`);
     }
 
     getModules() {
