@@ -730,6 +730,200 @@ class CreateNoteFromExceptionModal extends Modal {
     }
 }
 
+class ManageGroupModal extends Modal {
+    constructor(app, plugin, subject) {
+        super(app);
+        this.plugin = plugin;
+        this.subject = subject;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: `Group — ${this.subject.name}` });
+
+        const existing = this.plugin.groups[this.subject.folderName] || {};
+        let groupName = existing.groupName || '';
+        let projectTitle = existing.projectTitle || '';
+        let members = [...(existing.members || [])];
+        let tasks = [...(existing.tasks || [])];
+
+        new Setting(contentEl)
+            .setName('Group Name')
+            .addText(text => text.setValue(groupName).setPlaceholder('e.g., G2').onChange(v => groupName = v));
+
+        new Setting(contentEl)
+            .setName('Project Title')
+            .addText(text => text.setValue(projectTitle).setPlaceholder('e.g., Microservices App').onChange(v => projectTitle = v));
+
+        // Members section
+        contentEl.createEl('h3', { text: 'Members' });
+        const membersContainer = contentEl.createDiv();
+
+        const renderMembers = () => {
+            membersContainer.empty();
+            members.forEach((m, i) => {
+                new Setting(membersContainer)
+                    .setName(m)
+                    .addButton(btn => btn.setButtonText('Remove').setWarning().onClick(() => {
+                        members.splice(i, 1);
+                        renderMembers();
+                    }));
+            });
+        };
+        renderMembers();
+
+        let newMember = '';
+        const knownMembers = this.plugin.getMembers();
+        let memberDropdown = null;
+        let memberText = null;
+        const addMemberSetting = new Setting(contentEl).setName('Add Member');
+        addMemberSetting.addDropdown(dd => {
+            memberDropdown = dd;
+            dd.addOption('', '-- Known members --');
+            knownMembers.forEach(m => dd.addOption(m, m));
+            dd.onChange(v => { if (v) { newMember = v; if (memberText) memberText.setValue(v); } });
+        });
+        addMemberSetting
+            .addText(text => {
+                memberText = text;
+                text.setPlaceholder('Or type new name').onChange(v => { newMember = v; });
+            })
+            .addButton(btn => btn.setButtonText('Add').setCta().onClick(() => {
+                const val = newMember.trim();
+                if (val && !members.includes(val)) {
+                    members.push(val);
+                    // refresh dropdown with new name
+                    if (memberDropdown) {
+                        memberDropdown.addOption(val, val);
+                    }
+                    newMember = '';
+                    if (memberText) memberText.setValue('');
+                    if (memberDropdown) memberDropdown.setValue('');
+                    renderMembers();
+                }
+            }));
+
+        // Tasks section
+        contentEl.createEl('h3', { text: 'Tasks' });
+        const tasksContainer = contentEl.createDiv();
+
+        const renderTasks = () => {
+            tasksContainer.empty();
+            tasks.forEach((t, i) => {
+                new Setting(tasksContainer)
+                    .setName(t.text)
+                    .addToggle(toggle => toggle.setValue(t.done).onChange(v => { tasks[i].done = v; }))
+                    .addButton(btn => btn.setButtonText('Remove').setWarning().onClick(() => {
+                        tasks.splice(i, 1);
+                        renderTasks();
+                    }));
+            });
+        };
+        renderTasks();
+
+        let newTask = '';
+        const knownTasks = this.plugin.getKnownTasks();
+        let taskDropdown = null;
+        let taskText = null;
+        const addTaskSetting = new Setting(contentEl).setName('Add Task');
+        addTaskSetting.addDropdown(dd => {
+            taskDropdown = dd;
+            dd.addOption('', '-- Recent tasks --');
+            knownTasks.forEach(t => dd.addOption(t, t));
+            dd.onChange(v => { if (v) { newTask = v; if (taskText) taskText.setValue(v); } });
+        });
+        addTaskSetting
+            .addText(text => {
+                taskText = text;
+                text.setPlaceholder('Or type new task').onChange(v => { newTask = v; });
+            })
+            .addButton(btn => btn.setButtonText('Add').setCta().onClick(() => {
+                const val = newTask.trim();
+                if (val && !tasks.find(t => t.text === val)) {
+                    tasks.push({ text: val, done: false });
+                    if (taskDropdown) taskDropdown.addOption(val, val);
+                    newTask = '';
+                    if (taskText) taskText.setValue('');
+                    if (taskDropdown) taskDropdown.setValue('');
+                    renderTasks();
+                }
+            }));
+
+        new Setting(contentEl)
+            .addButton(btn => btn.setButtonText('Save').setCta().onClick(async () => {
+                await this.plugin.saveGroup(this.subject.folderName, { groupName, projectTitle, members, tasks });
+                this.close();
+            }));
+    }
+
+    onClose() { this.contentEl.empty(); }
+}
+
+class SelectSubjectForGroupModal extends SuggestModal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    getSuggestions(query) {
+        return this.plugin.subjects.filter(s =>
+            s.folderName.toLowerCase().includes(query.toLowerCase()) ||
+            s.name.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+
+    renderSuggestion(subject, el) {
+        const g = this.plugin.groups[subject.folderName];
+        el.createEl('div', { text: subject.name });
+        el.createEl('small', { text: g ? `Group: ${g.groupName || 'N/A'} | Project: ${g.projectTitle || 'N/A'}` : 'No group set' });
+    }
+
+    onChooseSuggestion(subject) {
+        new ManageGroupModal(this.app, this.plugin, subject).open();
+    }
+}
+
+class ViewGroupsModal extends Modal {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h2', { text: 'All Groups' });
+
+        const entries = Object.entries(this.plugin.groups);
+        if (entries.length === 0) {
+            contentEl.createEl('p', { text: 'No groups defined yet.' });
+            return;
+        }
+
+        entries.forEach(([folderName, g]) => {
+            const subject = this.plugin.subjects.find(s => s.folderName === folderName);
+            const div = contentEl.createDiv({ attr: { style: 'padding:10px;margin:6px 0;border:1px solid var(--background-modifier-border);border-radius:6px;' } });
+            div.createEl('strong', { text: subject ? subject.name : folderName });
+            div.createEl('span', { text: ` — Group: ${g.groupName || 'N/A'} | Project: ${g.projectTitle || 'N/A'}` });
+            if (g.members?.length) {
+                div.createEl('br');
+                div.createEl('small', { text: `Members: ${g.members.join(', ')}` });
+            }
+            if (g.tasks?.length) {
+                div.createEl('br');
+                const done = g.tasks.filter(t => t.done).length;
+                div.createEl('small', { text: `Tasks: ${done}/${g.tasks.length} done` });
+                g.tasks.forEach(t => {
+                    div.createEl('div', { text: `${t.done ? '✅' : '⬜'} ${t.text}`, attr: { style: 'margin-left:12px;font-size:13px;' } });
+                });
+            }
+        });
+    }
+
+    onClose() { this.contentEl.empty(); }
+}
+
 class ScheduleViewModal extends Modal {
     constructor(app, plugin) {
         super(app);
@@ -908,6 +1102,22 @@ module.exports = class SubjectManagerPlugin extends Plugin {
                 new CreateNoteFromExceptionModal(this.app, this).open();
             }
         });
+
+        this.addCommand({
+            id: 'manage-group',
+            name: 'Manage Group',
+            callback: () => {
+                new SelectSubjectForGroupModal(this.app, this).open();
+            }
+        });
+
+        this.addCommand({
+            id: 'view-groups',
+            name: 'View All Groups',
+            callback: () => {
+                new ViewGroupsModal(this.app, this).open();
+            }
+        });
     }
 
     async loadSettings() {
@@ -937,6 +1147,13 @@ module.exports = class SubjectManagerPlugin extends Plugin {
         } catch {
             this.exceptions = [];
         }
+
+        try {
+            const data = await this.app.vault.adapter.read('.obsidian/plugins/subject-manager/groups.json');
+            this.groups = JSON.parse(data);
+        } catch {
+            this.groups = {};
+        }
     }
 
     async saveData() {
@@ -949,6 +1166,23 @@ module.exports = class SubjectManagerPlugin extends Plugin {
 
     getTeachers() {
         return [...new Set(this.subjects.map(s => s.teacher).filter(Boolean))];
+    }
+
+    getMembers() {
+        return [...new Set(Object.values(this.groups).flatMap(g => g.members || []))];
+    }
+
+    getKnownTasks() {
+        return [...new Set(Object.values(this.groups).flatMap(g => (g.tasks || []).map(t => t.text)))];
+    }
+
+    async saveGroup(folderName, groupData) {
+        this.groups[folderName] = groupData;
+        await this.app.vault.adapter.write(
+            '.obsidian/plugins/subject-manager/groups.json',
+            JSON.stringify(this.groups, null, 2)
+        );
+        new Notice(`Group saved for ${folderName}`);
     }
 
     getModules() {
